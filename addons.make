@@ -1,3 +1,6 @@
 ofxGui
 ofxOsc
 ofxXmlSettings
+ofxHeadPoseEstimator
+ofxKinect
+ofxOpenCv

@@ -4,6 +4,7 @@
 void ofApp::setup(){
 
     ofSetVerticalSync(true);
+    glEnable(GL_DEPTH_TEST);
     ofSetFrameRate(30);
     //ofBackground(0,0,0); // black
     ofBackground(255,255,255); // white
@@ -19,9 +20,21 @@ void ofApp::setup(){
     _gui.setPosition(0 , 0);
     _gui.minimizeAll();
 
+    //setup vision
+    w = 640;
+    h = 480;
+    f3DCamera = new camera3D();
+    //f3DCamera = new camera3D("127.0.0.1",11999,KW,KH); // remote cam
+    f3DImage.create(KH,KW,CV_32FC3);
+    f3DCamera->start();
 
-    fTrackHead = false;
-    //fMotorsEnabled = false;
+    // setup the head pose detector
+    fHeadPoseDetector = new headPoseDetector();
+    if (fHeadPoseDetector!=NULL)
+    {
+        fHeadPoseDetector->setup();
+    }
+
 
     arbotix = new arbotixController();
     loadConfiguration("arbotixConfig.xml");
@@ -32,39 +45,39 @@ void ofApp::setup(){
         //arbotix->attachServo(i);
     }
 
-    printf("setup servos % i %i",fServosNames.size(),fServosIds.size());
+    printf("---------------setup servos % i %i ---------------",fServosNames.size(),fServosIds.size());
 
 
     servo1.setController(arbotix);
     servo1.setName("servo1");
-    servo1.setId(1);
+    servo1.setId(0);
     servo1.setSpeed(256); // 256
 
     servo2.setController(arbotix);
     servo2.setName("servo2");
-    servo2.setId(2);
+    servo2.setId(1);
     servo2.setSpeed(50); //50
 
     servo3.setController(arbotix);
     servo3.setName("servo3");
-    servo3.setId(3);
+    servo3.setId(2);
     servo3.setSpeed(85); //85
 
     servo4.setController(arbotix);
     servo4.setName("servo4");
-    servo4.setId(4);
+    servo4.setId(3);
     servo4.setSpeed(128);
 
     servo5.setController(arbotix);
     servo5.setName("servo5");
-    servo5.setId(5);
+    servo5.setId(4);
     servo5.setSpeed(128);
 
-    printf("setup servos done");
+    printf("setup servos done\n");
 
 
     ///setup osc connexion and controls
-    printf("setup osc connexion and controls");
+    printf("---------------setup osc connexion and controls-----------------\n");
 
     fAngleControl1.setName("Servo 1");
     fAngleControl1.add(fAngleServo1.set("angle",0.5,0.0,1.0));
@@ -101,8 +114,27 @@ void ofApp::setup(){
     fHeadPositionControl.add(fHeadPositionY.set("Y",384,0,768));
 
     fBooleanControls.setName("Controls");
-    fBooleanControls.add(fMotorsEnabled.set("Motors enabled",false));
-    fMotorsEnabled.addListener(this,&ofApp::enableMotors);
+
+    fBooleanControls.add(fbMotorsEnabled.set("Motors enabled",false));
+    fbMotorsEnabled.addListener(this,&ofApp::enableMotors);
+
+    fBooleanControls.add(fbDrawCloud.set("Draw Cloud",false));
+    fbDrawCloud.addListener(this,&ofApp::enableDrawCloud);
+
+
+    fBooleanControls.add(fbFindHead.set("Find head",false));
+    fbFindHead.addListener(this,&ofApp::enableFindHead);
+
+    fBooleanControls.add(fbTrackHead.set("Track head",false));
+    fbTrackHead.addListener(this,&ofApp::enableHeadTracking);
+
+
+    fbMotorsEnabled = false;
+    fbDrawCloud = false;
+    fbFindHead = false;
+    fbTrackHead = false;
+
+    printf("draw cloud = %i\n",fbDrawCloud);
 
     fGlobalControls.add(fAngleControl1);
     fGlobalControls.add(fAngleControl2);
@@ -131,7 +163,8 @@ void ofApp::setup(){
 
     arbotix->connectController(fArbotixPortName,fArbotixRate);
 
-
+    cas = 2;
+    objectDetectionStartTime = clock();
 }
 
 
@@ -145,34 +178,32 @@ void ofApp::update(){
     int elapsedTime = ofGetElapsedTimeMillis();
     //ofLogNotice() << "Elapsed time : " <<  elapsedTime ;
 
-    // check head position;
-    if (fTrackHead==true)
+
+
+    //--------------------------- VISON --------------------------
+
+    if( cas == 2 && fbDrawCloud == true)
     {
-        //usleep(500000);
+        f3DCamera->update();
+        if (f3DCamera->isFrameNew())
+        {
+            calcAvgFPS();
 
-        //take mean of head positions
-    //    int sumValX = 0;
-    //    int sumValY = 0;
+            if (fbFindHead == true)
+            {
+                updateCloud();
+                fHeadPoses.clear();
+                int nbPoses = fHeadPoseDetector->getHeadPoses(f3DImage,fHeadPoses);
+            }
+        }
+    }
 
-    //    int count =0;
-    //    for (int i=0;i<500;i++)
-    //    {
-    //        sumValX +=fOssiaHeadPositionX;
-    //        sumValY +=fOssiaHeadPositionY;
-
-    //        count +=1;
-    //    }
-
-        //fmeanHeadPositionX = ofMap(1024-sumValX/count,0,1024,0.,1.);
-        //fmeanHeadPositionY = ofMap(768-sumValY/count,0,768,0.,1.);
-
+    // check head position;
+    if (fbTrackHead==true)
+    {
         //take head positions at each frame
         fmeanHeadPositionX = ofMap(1024-fHeadPositionX,0,1024,0.,1.);
         fmeanHeadPositionY = ofMap(768-fHeadPositionY,0,768,0.,1.);
-
-//        fmeanHeadPositionX = ofMap(fOssiaHeadPositionX,0,1024,0.,1.);
-//        fmeanHeadPositionY = ofMap(768-fOssiaHeadPositionY,0,768,0.,1.);
-
 
         fAngleServo4.set(fmeanHeadPositionY);
         fAngleServo5.set(fmeanHeadPositionX);
@@ -183,7 +214,7 @@ void ofApp::update(){
 
     // set or get servos angles
 
-    if (fMotorsEnabled==false)
+    if (fbMotorsEnabled==false && arbotix->isInitialized())
     {
         int posServo1 = servo1.getPos();
         int posServo2 = servo2.getPos();
@@ -222,7 +253,7 @@ void ofApp::update(){
     arbotix->update();
 
     //update servos
-    if (arbotix->isInitialized() && fMotorsEnabled) {
+    if (arbotix->isInitialized() && fbMotorsEnabled) {
         //printf("set servo 2 angle to %f\n",fAngleServo2.get());
         servo1.setup(fMinServo1,fMaxServo1);
         servo2.setup(fMinServo2,fMaxServo2);
@@ -244,13 +275,6 @@ void ofApp::update(){
      }
 
 
-    // check servos parameters
-    //int tempServo3 = arbotix->getServoTemp(3);
-    //printf ("temp servo 3 :%i\n",tempServo3);
-
-    //bool ret = arbotix->waitForSysExMessage(SYSEX_DYNAMIXEL_GET_REGISTER, 2);
-
-
      // check servos temp
 
      if (elapsedTime>=2000)
@@ -265,12 +289,6 @@ void ofApp::update(){
 
         ofResetElapsedTimeCounter() ;
      }
-
-    //arbotix->getDynamixelRegister(4,0x2B,2);
-    //arbotix->getDynamixelRegister(5,0x2B,2);
-
-    //usleep(100000);
-    //ofResetElapsedTimeCounter() ;
 
 }
 
@@ -288,7 +306,7 @@ void ofApp::standUp()
 
 void ofApp::goToRest()
 {
-      fTrackHead = false;
+      fbTrackHead = false;
 
 }
 
@@ -298,6 +316,18 @@ void ofApp::goToRest()
 void ofApp::draw(){
  _gui.draw();
 
+ // VISION
+  if( cas == 2)
+  {
+     easyCam.begin();
+     if (fbDrawCloud) {
+         drawPointCloud();
+         drawPoses();
+     }
+     easyCam.end();
+     //drawReport();
+  }
+ 
  // display temp servo 2
  ofSetColor(ofColor::black);
  if (fServo2Temp>=60 and fServo2Temp<=70)
@@ -335,11 +365,18 @@ void ofApp::draw(){
          ,ofGetWindowWidth()- 200, 250);
 }
 
+double ofApp::diffclock(clock_t clock1, clock_t clock2)
+{
+    double diffticks = clock1 - clock2;
+    double diffms = (diffticks) / (CLOCKS_PER_SEC / 1000);
+    return diffms;
+}
+
 void ofApp::enableMotors(bool &state)
 {
     if (state==true)
     {
-        fMotorsEnabled = true;
+        fbMotorsEnabled = true;
     }
     else
     {
@@ -348,7 +385,43 @@ void ofApp::enableMotors(bool &state)
         servo4.disable();
         servo5.disable();
         servo1.disable();
-        fMotorsEnabled = false;
+        fbMotorsEnabled = false;
+    }
+}
+
+void ofApp::enableDrawCloud(bool &state)
+{
+    if (state==true)
+    {
+        fbDrawCloud = true;
+    }
+    else
+    {
+        fbDrawCloud = false;
+    }
+}
+
+void ofApp::enableHeadTracking(bool &state)
+{
+    if (state==true)
+    {
+        fbTrackHead = true;
+    }
+    else
+    {
+        fbTrackHead = false;
+    }
+}
+
+void ofApp::enableFindHead(bool &state)
+{
+    if (state==true)
+    {
+        fbFindHead = true;
+    }
+    else
+    {
+        fbFindHead = false;
     }
 }
 
@@ -356,7 +429,7 @@ void ofApp::enableMotors(bool &state)
 //{
 //    if (state==true)
 //    {
-//        fMotorsEnabled = true;
+//        fbMotorsEnabled = true;
 //    }
 //    else
 //    {
@@ -365,7 +438,7 @@ void ofApp::enableMotors(bool &state)
 //        servo4.disable();
 //        servo5.disable();
 //        servo1.disable();
-//        fMotorsEnabled = false;
+//        fbMotorsEnabled = false;
 //    }
 //}
 //--------------------------------------------------------------
@@ -374,13 +447,13 @@ void ofApp::keyPressed(int key){
     switch(key){
 
     case 'a':
-        if (fMotorsEnabled ==false)
+        if (fbMotorsEnabled ==false)
         {
             bool val = true;
             enableMotors(val);
 
         }
-        else if (fMotorsEnabled==true)
+        else if (fbMotorsEnabled==true)
         {
             bool val = false;
             enableMotors(val);
@@ -389,13 +462,13 @@ void ofApp::keyPressed(int key){
 
 
     case 't' :
-        if (fTrackHead ==false)
+        if (fbTrackHead ==false)
         {
-            fTrackHead = true;
+            fbTrackHead = true;
         }
-        else if (fTrackHead==true)
+        else if (fbTrackHead==true)
         {
-            fTrackHead = false;
+            fbTrackHead = false;
         }
         break;
 
@@ -411,6 +484,17 @@ void ofApp::keyPressed(int key){
         //arbotix->setDynamixelRegister(4,0x19,2,1);
         break;
 
+    case 'd' :
+        if (fbDrawCloud ==false)
+        {
+            fbDrawCloud = true;
+        }
+        else if (fbDrawCloud==true)
+        {
+            fbDrawCloud = false;
+        }
+        break;
+        break;
 
     default:
         break;
@@ -538,7 +622,7 @@ void ofApp::loadConfiguration(const std::string &fileName)
 
               ofLogNotice () << "Servo " << servoName << " id : " <<  id << " initial pos " << pos;
 
-              if (servoName!="" && id!=0)
+              if (servoName!="" /*&& id!=0*/)
               {
                   ofLogNotice () << "Servo " << servoName << " id : " <<  id << " min : " << min;
                   ofLogNotice () << "Servo " << servoName << " id : " <<  id << " max : " << max;
@@ -554,4 +638,101 @@ void ofApp::loadConfiguration(const std::string &fileName)
          }
 
     }
+}
+//--------------------------------------------------------------
+void ofApp::calcAvgFPS() {
+    int currMillis = ofGetElapsedTimeMillis();
+    avgkFPS += (1000.0/(currMillis-lastMillis))/FPS_MEAN;
+    lastMillis = currMillis;
+    frameCount++;
+    if (frameCount >= FPS_MEAN) {
+        kFPS = avgkFPS;
+        avgkFPS = frameCount =  0;
+    }
+}
+//--------------------------------------------------------------
+void ofApp::updateCloud() {
+        //generate 3D image
+        for(int y = 0; y < f3DImage.rows; y++)
+        {
+                Vec3f* Mi = f3DImage.ptr<Vec3f>(y);
+                for(int x = 0; x < f3DImage.cols; x++){
+                        ofVec3f thePoint = f3DCamera->getWorldCoordinateAt(x,y);
+
+                        if ( (thePoint.z < g_max_z) && (thePoint.z > 0) ){
+                                Mi[x][0] = thePoint.x;
+                                Mi[x][1] = thePoint.y;
+                                Mi[x][2] = thePoint.z;
+                        }
+                        else
+                                Mi[x] = 0;
+                }
+        }
+}
+//--------------------------------------------------------------
+void ofApp::drawPointCloud() {
+        ofMesh mesh;
+
+        mesh.setMode(OF_PRIMITIVE_POINTS);
+        int step = 2;
+        for(int y = 0; y < h; y += step) {
+                for(int x = 0; x < w; x += step) {
+                        if ((f3DCamera->getDistanceAt(x, y) > 0) && (f3DCamera->getDistanceAt(x, y) < g_max_z)) {
+                                mesh.addColor(ofColor::grey);
+                                mesh.addVertex(f3DCamera->getWorldCoordinateAt(x, y));
+                        }
+                }
+        }
+        ofPushMatrix();
+        glPointSize(3);
+        // the projected points are 'upside down' and 'backwards'
+        ofScale(1, -1, -1);
+        ofTranslate(0, 0, -1000); // center the points a bit
+        glEnable(GL_DEPTH_TEST);
+        mesh.drawVertices();
+        glDisable(GL_DEPTH_TEST);
+        ofPopMatrix();
+}
+//--------------------------------------------------------------
+void ofApp::drawPoses() {
+    ofPushMatrix();
+    // the projected points are 'upside down' and 'backwards'
+    ofScale(1, -1, -1);
+    ofTranslate(0, 0, -1000); // center the points a bit
+    ofSetColor(0,0,255);
+    glLineWidth(3);
+    if(fHeadPoses.size()>0)
+    {
+            for(unsigned int i=0;i<1/*g_means.size()*/;++i)
+            {
+                ofVec3f pos = ofVec3f(fHeadPoses[i][0], fHeadPoses[i][1], fHeadPoses[i][2]);
+                ofVec3f dir = ofVec3f(0,0,-150);
+                dir.rotate(fHeadPoses[i][3], fHeadPoses[i][4], fHeadPoses[i][5]);
+                dir += pos;
+                ofLine(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
+                //printf("pos x = %.1f\n",pos.x);
+                //printf("pos y = %.1f\n",pos.y);
+                float xcm = (pos.x + float(w)/2)/37.795275590551;
+                float ycm = (pos.y + float(h)/2)/37.795275590551;
+
+                double timeDiffMs = diffclock(clock(),objectDetectionStartTime);
+                //printf("diff MS = %f\n",timeDiffMs);
+                if (timeDiffMs>=50.0)
+                {
+                    fHeadPositionX.set(xcm*64);
+                    fHeadPositionY.set(ycm*64);
+                    objectDetectionStartTime = clock();
+                }
+           }
+        }
+        ofPopMatrix();
+}
+//--------------------------------------------------------------
+void ofApp::drawReport() {
+    ofPushMatrix();
+    ofSetColor(0);
+    char reportStr[1024];
+    sprintf(reportStr, "framecount: %i   FPS: %.2f", frameCount, kFPS);
+    ofDrawBitmapString(reportStr, 10, 10);
+    ofPopMatrix();
 }

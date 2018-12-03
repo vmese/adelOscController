@@ -188,7 +188,7 @@ void arbotixController::sendServoAngle(int servoId, int angle, int speed)
     {
         //ofLogError() << "Error : angle not correct : " << angle;
     }
-    else if (servoId<1 || servoId >5)
+    else if (servoId<0 || servoId >4)
     {
         ofLogError() << "Error : servoId not correct : " << servoId;
     }
