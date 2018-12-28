@@ -33,6 +33,10 @@ const int kNbOfServos = 5;
 // for the average fps calculation
 #define FPS_MEAN 30
 
+#define HFocalLength 442
+#define VFocalLength 467.7
+
+#define PI 3.14159
 
 class ofApp : public ofBaseApp{
 	public:
@@ -190,4 +194,6 @@ class ofApp : public ofBaseApp{
                 float avgkFPS = 0;
                 int frameCount = 0;
                 int lastMillis = 0;
+                float fHeadHorizontalPos;
+                float fHeadVerticalPos;
 };

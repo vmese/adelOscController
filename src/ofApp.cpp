@@ -21,8 +21,8 @@ void ofApp::setup(){
     _gui.minimizeAll();
 
     //setup vision
-    w = 640;
-    h = 480;
+    w = KW ; //640;
+    h = KH ; //480;
     f3DCamera = new camera3D();
     //f3DCamera = new camera3D("127.0.0.1",11999,KW,KH); // remote cam
     f3DImage.create(KH,KW,CV_32FC3);
@@ -205,10 +205,17 @@ void ofApp::update(){
         fmeanHeadPositionX = ofMap(1024-fHeadPositionX,0,1024,0.,1.);
         fmeanHeadPositionY = ofMap(768-fHeadPositionY,0,768,0.,1.);
 
-        fAngleServo4.set(fmeanHeadPositionY);
-        fAngleServo5.set(fmeanHeadPositionX);
-        printf("X HEAD : %f\n",fmeanHeadPositionX);
-        printf("Y HEAD : %f\n",fmeanHeadPositionY);
+        //printf("Val X : %i\n",1024-fHeadPositionX);
+        //printf("Val Y : %i\n",768-fHeadPositionY);
+
+
+        //printf("X HEAD : %f\n",fmeanHeadPositionX);
+        //printf("Y HEAD : %f\n",fmeanHeadPositionY);
+
+        float servo5Angle = ofMap(-fHeadHorizontalPos,-28.5,28.5,0.0,1.0);
+        float servo4Angle = ofMap(-fHeadVerticalPos,-21.5,21.5,0.0,1.0);
+        fAngleServo4.set(servo4Angle);
+        fAngleServo5.set(servo5Angle);
     }
 
 
@@ -710,17 +717,27 @@ void ofApp::drawPoses() {
                 dir.rotate(fHeadPoses[i][3], fHeadPoses[i][4], fHeadPoses[i][5]);
                 dir += pos;
                 ofLine(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
-                //printf("pos x = %.1f\n",pos.x);
-                //printf("pos y = %.1f\n",pos.y);
-                float xcm = (pos.x + float(w)/2)/37.795275590551;
-                float ycm = (pos.y + float(h)/2)/37.795275590551;
 
                 double timeDiffMs = diffclock(clock(),objectDetectionStartTime);
                 //printf("diff MS = %f\n",timeDiffMs);
-                if (timeDiffMs>=50.0)
+                if (timeDiffMs>=50.0 and fbTrackHead==true)
                 {
-                    fHeadPositionX.set(xcm*64);
-                    fHeadPositionY.set(ycm*64);
+                    //printf("pos x = %.1f\n",pos.x);
+                    //printf("pos y = %.1f\n",pos.y);
+                    //printf("pos z = %.1f\n",pos.z);
+                    //float xcm = (pos.x + float(w)/2)/37.795275590551;
+                    //float ycm = (pos.y + float(h)/2)/37.795275590551;
+                    ofPoint currentPos = pos;
+                    float xm = (pos.x)/HFocalLength * pos.z;
+                    float ym = (pos.y)/VFocalLength * pos.z;
+                    fHeadHorizontalPos = atan(xm/pos.z) *180/PI;
+                    fHeadVerticalPos = atan(ym/pos.z) *180/PI;
+
+                    //printf("distance = %.1f\n",pos.z);
+                    //printf("xm = %.1f\n",xm);
+                    //printf("angle horizontal= %.1f\n",fHeadHorizontalPos);
+                    //printf("angle vertical= %.1f\n",fHeadVerticalPos);
+
                     objectDetectionStartTime = clock();
                 }
            }
