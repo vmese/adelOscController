@@ -38,6 +38,10 @@ const int kNbOfServos = 5;
 
 #define PI 3.14159
 
+#define upperArmLength 0.42
+#define botomArmLength 0.47
+
+
 class ofApp : public ofBaseApp{
 	public:
 		void setup();
@@ -194,6 +198,8 @@ class ofApp : public ofBaseApp{
                 float avgkFPS = 0;
                 int frameCount = 0;
                 int lastMillis = 0;
+
+                bool fbLaunchBlockingMove;
                 float fHeadHorizontalPos;
                 float fHeadVerticalPos;
 };

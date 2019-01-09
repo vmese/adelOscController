@@ -23,6 +23,8 @@ public:
     void enable();
     void disable();
     std::string getName();
+    void waitForStop();
+    bool moveAndWait(const float &angle);
 
 private:
     arbotixController *fController;

@@ -65,6 +65,9 @@ public:
     void getDynamixelRegister(const unsigned char &servo, const unsigned char &reg, const unsigned char &length);
     void setDynamixelRegister(const unsigned char &servo, const unsigned char &reg, const unsigned char &length, const unsigned int &value);
     void moveServos();
+    bool moveServoAndWait(const int & servoId, const int & pos, const int & speed );
+    bool waitForDynamixelStopped(unsigned char servo);
+    void test();
 
 private :
 

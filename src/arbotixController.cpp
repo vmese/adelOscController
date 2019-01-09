@@ -94,6 +94,13 @@ void arbotixController::attachServo(const uint &servoId)
 
 }
 
+bool arbotixController::waitForDynamixelStopped(unsigned char servo)
+{
+    arbotix->sendDynamixelStopped(servo);
+    int ret = arbotix->waitForSysExMessage(SYSEX_DYNAMIXEL_STOPPED, 10);
+    return ret;
+}
+
 //void arbotixController::resetServo(const uint &servoId)
 //{
 //    if (xInitialized)
@@ -236,11 +243,27 @@ void arbotixController::moveServos()
     arbotix->sendDynamixelSynchMoveExecute();
 }
 
+bool arbotixController::moveServoAndWait(const int & servoId, const int & pos, const int & speed )
+{
+    arbotix->sendDynamixelMove(servoId,pos,speed);
+    int ret = waitForDynamixelStopped(servoId);
+    return ret;
+}
+
 void arbotixController::disconnect()
 {
    arbotix->disconnect();
    xInitialized = false;
 
+}
+
+
+void arbotixController::test()
+{
+    arbotix->sendDynamixelMove(0, 512, 256);
+    arbotix->sendDynamixelStopped(0);
+    int ret = arbotix->waitForSysExMessage(SYSEX_DYNAMIXEL_STOPPED, 10);
+    printf("ret = %i\n",ret);
 }
 
 void arbotixController::enableServo(const unsigned int &servoId)

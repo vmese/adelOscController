@@ -50,6 +50,20 @@ void servo::setAngle(float angle)
     fAngle = (int) ofMap(angle,0.,1.,fMin,fMax);
 }
 
+void servo::waitForStop()
+{
+    if (fIsInitialized)
+    {
+        if (fController==NULL)
+        {
+         ofLogError("Servo Controller not set");
+        }
+        else
+        {
+            fController->waitForDynamixelStopped((unsigned char)fId);
+        }
+    }
+}
 
 void servo::update()
 {
@@ -70,6 +84,15 @@ void servo::update()
             fController->sendServoAngle(fId, angle, fSpeed);
         }
     }
+}
+
+bool servo::moveAndWait(const float & angle)
+{
+    //printf ("servo::moveAndWait - angle = %f, ",angle);
+    this->setAngle(angle);
+    //printf ("move servo to %i - and wait, ",fAngle);
+    int ret = fController->moveServoAndWait(fId,fAngle,fSpeed);
+    return ret;
 }
 
 void servo::setName(const std::string &name)

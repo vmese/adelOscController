@@ -1116,7 +1116,9 @@ void ofArbotix::sendDynamixelSynchMoveExecute() {
 //Transmits the command to move a single motor. Does not use the synch move.
 //Please note that this will ONLY work for an arbotix arduino board
 void ofArbotix::sendDynamixelMove(unsigned char servo, int pos, int speed) {
-	unsigned char pos0 = getLowByte(pos);
+
+        printf("send pos : %i - to servo %i - speed = %i\n",pos, servo, speed);
+        unsigned char pos0 = getLowByte(pos);
 	unsigned char pos1 = getHighByte(pos);
 	unsigned char speed0 = getLowByte(speed);
 	unsigned char speed1 = getHighByte(speed);

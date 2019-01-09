@@ -51,7 +51,7 @@ void ofApp::setup(){
     servo1.setController(arbotix);
     servo1.setName("servo1");
     servo1.setId(0);
-    servo1.setSpeed(256); // 256
+    servo1.setSpeed(40); // 256
 
     servo2.setController(arbotix);
     servo2.setName("servo2");
@@ -133,6 +133,7 @@ void ofApp::setup(){
     fbDrawCloud = false;
     fbFindHead = false;
     fbTrackHead = false;
+    fbLaunchBlockingMove = false;
 
     printf("draw cloud = %i\n",fbDrawCloud);
 
@@ -150,7 +151,7 @@ void ofApp::setup(){
     fGlobalControls.add(fBooleanControls);
 
     _gui.setup(fGlobalControls);
-    iccoreConnexion.setup((ofParameterGroup&)_gui.getParameter(),6669,fRemoteControllerIP,fRemoteControllerListeningPort);
+    iccoreConnexion.setup((ofParameterGroup&)_gui.getParameter(),6666,fRemoteControllerIP,fRemoteControllerListeningPort);
 
 
     //ofSetLogLevel(OF_LOG_VERBOSE);
@@ -182,7 +183,7 @@ void ofApp::update(){
 
     //--------------------------- VISON --------------------------
 
-    if( cas == 2 && fbDrawCloud == true)
+    if( cas == 2 && fbDrawCloud == true /*&& elapsedTime>=1000*/)
     {
         f3DCamera->update();
         if (f3DCamera->isFrameNew())
@@ -196,29 +197,98 @@ void ofApp::update(){
                 int nbPoses = fHeadPoseDetector->getHeadPoses(f3DImage,fHeadPoses);
             }
         }
+
+        // check head position;
+        if (fbTrackHead==true)
+        {
+            //take head positions at each frame
+            fmeanHeadPositionX = ofMap(1024-fHeadPositionX,0,1024,0.,1.);
+            fmeanHeadPositionY = ofMap(768-fHeadPositionY,0,768,0.,1.);
+
+            //printf("Val X : %i\n",1024-fHeadPositionX);
+            //printf("Val Y : %i\n",768-fHeadPositionY);
+
+
+            //printf("X HEAD : %f\n",fmeanHeadPositionX);
+            //printf("Y HEAD : %f\n",fmeanHeadPositionY);
+
+            float servo5Angle = ofMap(-fHeadHorizontalPos,-28.5,28.5,0.0,1.0);
+            float servo4Angle = ofMap(-fHeadVerticalPos,-21.5,21.5,0.0,1.0);
+            fAngleServo4.set(servo4Angle);
+            fAngleServo5.set(servo5Angle);
+
+            /* assert arms mouvments */
+            if (fHeadVerticalPos>=0)
+            {
+                float servo3Angle = ofMap(fHeadVerticalPos,0,21.5,0.5,0.7);
+                fAngleServo3.set(servo3Angle);
+                fAngleServo2.set(0.5);
+            }
+            else
+            {
+                float servo2Angle = ofMap(-fHeadVerticalPos,0,21.5,0.5,0.1);
+                float servo3Angle = ofMap(-fHeadVerticalPos,0,21.5,0.5,0.1);
+                fAngleServo2.set(servo2Angle);
+                fAngleServo3.set(servo3Angle);
+            }
+
+            // --------- assert base angle on head position (not working) -----------
+//            float servo1AngleDegrees = 512 + (fHeadHorizontalPos/180.0*3*512);
+//            printf("fHeadHorizontalPos = %f degrees \n ",fHeadHorizontalPos);
+//            printf("fAngleServo1 =  %f \n ",fAngleServo1.get());
+//            float newServo1Angle = servo1AngleDegrees/1024 - (0.5-fAngleServo1.get()) ;
+//            if (newServo1Angle<=0.0)
+//            {
+//                newServo1Angle = 0.0;
+//            }
+//            if (newServo1Angle>=1.0)
+//            {
+//                newServo1Angle = 1.0;
+//            }
+//            fAngleServo1.set(newServo1Angle);
+//            printf("set fAngleServo1 to %f \n ",newServo1Angle);
+            // ----------------------------------------------------------------------
+
+            //printf("fAngleServo5 : %f\n",fAngleServo5);
+            // if head is too on the left ->rotate bas to the left
+            if (elapsedTime>0)
+            {
+                if (fAngleServo5>=0.95 && fAngleServo1 >=0.1)
+                {
+                    fbLaunchBlockingMove = true;
+                    fbTrackHead = false;
+                    fAngleServo1 -= 0.1 ;
+                    if (fAngleServo1<=0.0)
+                         fAngleServo1=0.0;
+                     printf("Decrease base angle to %f\n\n",fAngleServo1);
+                    fAngleServo5=0.5;
+        //            //fmeanHeadPositionX = 0.5;
+                }
+                if (fAngleServo5<=0.05 && fAngleServo1 <=0.9 )
+                {
+                    fbLaunchBlockingMove = true;
+                    fbTrackHead = false;
+                    fAngleServo1 += 0.1;
+                    if (fAngleServo1>=1.0)
+                        fAngleServo1=1.0;
+                    printf("Increase base angle to %f\n\n",fAngleServo1);
+                    fAngleServo5=0.5;
+        //            //fmeanHeadPositionX = 0.5;
+                }
+            } // if elapsedTime>1000
+        }
+
+        // read servos tempsfHeadHorizontalPos
+        // read a first value, otherwise temp is false in second reading (0x2B)
+//        arbotix->getDynamixelRegister(3,0x24,2);
+
+//        fServo2Temp = servo2.getTemp();
+//        fServo3Temp = servo3.getTemp();
+//        //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
+//        //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+
+//        ofResetElapsedTimeCounter() ;
     }
-
-    // check head position;
-    if (fbTrackHead==true)
-    {
-        //take head positions at each frame
-        fmeanHeadPositionX = ofMap(1024-fHeadPositionX,0,1024,0.,1.);
-        fmeanHeadPositionY = ofMap(768-fHeadPositionY,0,768,0.,1.);
-
-        //printf("Val X : %i\n",1024-fHeadPositionX);
-        //printf("Val Y : %i\n",768-fHeadPositionY);
-
-
-        //printf("X HEAD : %f\n",fmeanHeadPositionX);
-        //printf("Y HEAD : %f\n",fmeanHeadPositionY);
-
-        float servo5Angle = ofMap(-fHeadHorizontalPos,-28.5,28.5,0.0,1.0);
-        float servo4Angle = ofMap(-fHeadVerticalPos,-21.5,21.5,0.0,1.0);
-        fAngleServo4.set(servo4Angle);
-        fAngleServo5.set(servo5Angle);
-    }
-
-
     // set or get servos angles
 
     if (fbMotorsEnabled==false && arbotix->isInitialized())
@@ -268,17 +338,45 @@ void ofApp::update(){
         servo4.setup(fMinServo4,fMaxServo4);
         servo5.setup(fMinServo5,fMaxServo5);
 
-        servo1.setAngle(fAngleServo1.get());
-        servo2.setAngle(fAngleServo2.get());
-        servo3.setAngle(fAngleServo3.get());
-        servo4.setAngle(fAngleServo4.get());
-        servo5.setAngle(fAngleServo5.get());
-        servo1.update();
-        servo2.update();
-        servo3.update();
-        servo4.update();
-        servo5.update();
-        arbotix->moveServos();
+        if (fbLaunchBlockingMove==false)
+        {
+            servo1.setAngle(fAngleServo1.get());
+            servo2.setAngle(fAngleServo2.get());
+            servo3.setAngle(fAngleServo3.get());
+            servo4.setAngle(fAngleServo4.get());
+            servo5.setAngle(fAngleServo5.get());
+
+            // ---- launch non blocking move -------
+            servo1.update();
+            servo2.update();
+            servo3.update();
+            servo4.update();
+            servo5.update();
+            arbotix->moveServos();
+        }
+        else
+        {
+            //f3DCamera->stop();
+            // ---- launch blocking move -------
+            //ofResetElapsedTimeCounter() ;
+            //printf("start move and wait\n");
+            bool success = servo1.moveAndWait(fAngleServo1.get());
+            //int elapsedTime = ofGetElapsedTimeMillis();
+            //ofLogNotice() << "move and wait 1 : "<< success << " - Elapsed time : " <<  elapsedTime ;
+
+
+//            ofResetElapsedTimeCounter() ;
+//            success = servo5.moveAndWait(fAngleServo5);
+//            elapsedTime = ofGetElapsedTimeMillis();
+//            ofLogNotice() << "move and wait 2 : "<< success << " - Elapsed time : " <<  elapsedTime ;
+
+            //usleep(1000000);
+            //f3DCamera->start();
+
+            fbLaunchBlockingMove = false;
+            fbTrackHead = true;
+            //ofResetElapsedTimeCounter() ;
+        }
      }
 
 
@@ -286,14 +384,13 @@ void ofApp::update(){
 
      if (elapsedTime>=2000)
      {
-         // read a first value, otherwise temp is false in second reading (0x2B)
+        // read a first value, otherwise temp is false in second reading (0x2B)
         arbotix->getDynamixelRegister(3,0x24,2);
 
         fServo2Temp = servo2.getTemp();
         fServo3Temp = servo3.getTemp();
         //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
         //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
-
         ofResetElapsedTimeCounter() ;
      }
 
@@ -467,6 +564,14 @@ void ofApp::keyPressed(int key){
         }
         break;
 
+    case 'n' :
+        {
+        ofResetElapsedTimeCounter();
+        arbotix->test();
+        int elapsedTime = ofGetElapsedTimeMillis();
+        printf("elapsed time = %i ms\n",elapsedTime);
+        break;
+        }
 
     case 't' :
         if (fbTrackHead ==false)
@@ -686,6 +791,10 @@ void ofApp::drawPointCloud() {
                 for(int x = 0; x < w; x += step) {
                         if ((f3DCamera->getDistanceAt(x, y) > 0) && (f3DCamera->getDistanceAt(x, y) < g_max_z)) {
                                 mesh.addColor(ofColor::grey);
+//                                if (x==KW/2 && y==KH/2)
+//                                {
+//                                  printf("distance = %.1f\n",f3DCamera->getDistanceAt(KW/2,KH/2));
+//                                }
                                 mesh.addVertex(f3DCamera->getWorldCoordinateAt(x, y));
                         }
                 }
@@ -720,7 +829,7 @@ void ofApp::drawPoses() {
 
                 double timeDiffMs = diffclock(clock(),objectDetectionStartTime);
                 //printf("diff MS = %f\n",timeDiffMs);
-                if (timeDiffMs>=50.0 and fbTrackHead==true)
+                if (timeDiffMs>=50.0 /*and fbTrackHead==true*/)
                 {
                     //printf("pos x = %.1f\n",pos.x);
                     //printf("pos y = %.1f\n",pos.y);
@@ -730,12 +839,17 @@ void ofApp::drawPoses() {
                     ofPoint currentPos = pos;
                     float xm = (pos.x)/HFocalLength * pos.z;
                     float ym = (pos.y)/VFocalLength * pos.z;
-                    fHeadHorizontalPos = atan(xm/pos.z) *180/PI;
-                    fHeadVerticalPos = atan(ym/pos.z) *180/PI;
+                    fHeadHorizontalPos = atan(xm/pos.z) *180/PI; // pos in degrees
+                    fHeadVerticalPos = -atan(ym/pos.z) *180/PI;
 
                     //printf("distance = %.1f\n",pos.z);
                     //printf("xm = %.1f\n",xm);
-                    //printf("angle horizontal= %.1f\n",fHeadHorizontalPos);
+                    //printf("update head horizontal pos to %.1f\n",fHeadHorizontalPos);
+                    //printf("update head vertical pos to %.1f\n",fHeadVerticalPos);
+
+                    // display relative base angle
+                    float servo1AngleDegrees = 512 + (fHeadHorizontalPos/180.0*3*512);
+                    fHeadPositionX.set(servo1AngleDegrees);
                     //printf("angle vertical= %.1f\n",fHeadVerticalPos);
 
                     objectDetectionStartTime = clock();
