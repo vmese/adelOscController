@@ -16,10 +16,14 @@ public:
     void setAngle(float angle);
     void setId(const int &id);
     void setSpeed(const int &speed);
+    void setPGain(const int &pGain);
     void setName(const std::string &name);
     int  getId();
     int getTemp();
+    int getLoad();
+    float getLoadInPct();
     int getPos();
+    int getPGain();
     void enable();
     void disable();
     std::string getName();

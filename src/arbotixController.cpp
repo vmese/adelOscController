@@ -110,6 +110,26 @@ bool arbotixController::waitForDynamixelStopped(unsigned char servo)
 
 //}
 
+void arbotixController::sendMsgToPic(const char picId, const char picCmd, const char *picMess)
+{
+    if (xInitialized)
+    {
+        printf("turn on Leds\n");
+        int length;
+        switch (picCmd) {
+            case 0x01 : length = 12 ; break ;
+        }
+        for (int i=0;i<length;i++)
+        {
+            printf("set val %i to %i\n",i+1,picMess[i]);
+            arbotix->picMessage[i] = picMess[i];
+        }
+        arbotix->sendCmdToPic(picId,picCmd);
+        printf("turn on Leds done");
+    }
+
+}
+
 void arbotixController::setup()
 {
     //boost::mutex::scoped_lock lock(fMutex);
@@ -223,6 +243,47 @@ int arbotixController::getServoTemp(const unsigned int &servoId)
     }
 }
 
+
+int arbotixController::getServoLoad(const unsigned int &servoId)
+{
+    getDynamixelRegister(servoId,ax12LBLoadRegister,1);
+    getDynamixelRegister(servoId,ax12HBLoadRegister,1);
+    std::map <int,int>::iterator it1;
+    std::map <int,int>::iterator it2;
+    it1=fLBServosLoad.find(servoId);
+    if (it1!=fLBServosLoad.end())
+    {
+        it2=fHBServosLoad.find(servoId);
+        if (it2!=fHBServosLoad.end())
+        {
+            return (fLBServosLoad[servoId]+fHBServosLoad[servoId]*256)&0x1FF;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int arbotixController::getServoPGain(const unsigned int &servoId)
+{
+    getDynamixelRegister(servoId,ax12PGainRegister,2);
+    std::map <int,int>::iterator it;
+    it=fPGainServos.find(servoId);
+    if (it!=fPGainServos.end())
+    {
+        return fPGainServos[servoId];
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 int arbotixController::getServoPos(const unsigned int &servoId)
 {
     getDynamixelRegister(servoId,ax12PosRegister,2);
@@ -281,6 +342,15 @@ void arbotixController::disableServo(const unsigned int &servoId)
 
 }
 
+
+void arbotixController::setPGain(const unsigned int & servoId, const unsigned int &pGain)
+{
+    //getDynamixelRegister(servoId,ax12PGainRegister,2);
+    //printf("abotix : setPGain od servo %i to %i\n",servoId, pGain);
+    arbotix->sendDynamixelSetRegister(servoId, ax12PGainRegister, 2, pGain);
+    //getDynamixelRegister(servoId,ax12PGainRegister,2);
+
+}
 
 void arbotixController::update()
 {
@@ -491,10 +561,25 @@ void arbotixController::dynamixelGetRegister(const unsigned int &servo, const un
         fServosPos[servo]=value;
         //ofLogNotice() << "Température Servo " << servo << " : " << value <<  "°C";
     }
+    if (reg==ax12LBLoadRegister)
+    {
+        fLBServosLoad[servo]=value;
+        //ofLogNotice() << "LB Servo " << servo << " : " << value;
+    }
+    if (reg==ax12HBLoadRegister)
+    {
+        fHBServosLoad[servo]=value;
+        //ofLogNotice() << "HB Servo " << servo << " : " << value;
+    }
     if (reg==0x18)
     {
         //fServosPos[servo]=value;
         ofLogNotice() << "Servo " << servo << " : Torque Enbled : " << value ;
+    }
+    if (reg==ax12PGainRegister)
+    {
+        fPGainServos[servo]=value;
+        //ofLogNotice() << "P Gain servo  " << servo << " : " << value ;
     }
     //std::cout << "Get Register Servo: " << servo << ", reg: " << reg << ", value: " << value << "\r\n";
 }

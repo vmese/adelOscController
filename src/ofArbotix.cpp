@@ -1096,7 +1096,7 @@ void ofArbotix::sendDynamixelSynchMoveAdd(unsigned char servo, int pos, int spee
 	sysexData.push_back(speed0);
 	sysexData.push_back(speed1);
 	sysexData.push_back(checksum);
-	this->sendSysEx(SYSEX_DYNAMIXEL_SYNCH_MOVE_ADD, sysexData);
+        this->sendSysEx(SYSEX_DYNAMIXEL_SYNCH_MOVE_ADD, sysexData);
 
 	_dynamixelMoveAdds++;
 }
@@ -1163,6 +1163,48 @@ void ofArbotix::sendDynamixelSetRegister(unsigned char servo, unsigned char reg,
 	sysexData.push_back(val1);
 	sysexData.push_back(checksum);
 	this->sendSysEx(SYSEX_DYNAMIXEL_SET_REGISTER, sysexData);
+}
+
+void ofArbotix::sendCmdToPic(const char picId, const char picCmd) {
+
+        printf("ofArbotix::setLight() - cmd = %i\n",picCmd);
+
+        int messageLength;
+        switch (picCmd) {
+        case 0x01 : messageLength = 12; break;
+        default : return;
+        }
+        //sendSysEx
+        std::vector < unsigned char> sysexData;
+        printf("sysEx.pushBack : %i\n",picId);
+        sysexData.push_back(picId);
+        printf("sysEx.pushBack : %i\n",messageLength+3);
+        sysexData.push_back(messageLength+3);
+        printf("sysEx.pushBack : %i\n",0x03);
+        sysexData.push_back(0x03);
+        printf("sysEx.pushBack : %i\n",picCmd);
+        sysexData.push_back(picCmd);
+        for (int i=0;i<messageLength;i++)
+        {
+            printf("sysEx.pushBack : %i\n",picMessage[i]);
+            sysexData.push_back(picMessage[i]);
+        }
+
+        // calc checksum
+        unsigned int checksum = picId + messageLength + 3 + 0x03 + picCmd;
+        for ( int i = 0 ; i<messageLength ;i++ )
+        {
+            checksum +=picMessage[i];
+        }
+
+        while (checksum>=256)
+        {
+            checksum-=256;
+        }
+        printf("sysEx.pushBack : %i\n",checksum);
+        sysexData.push_back(checksum);
+        //sendSysEx
+        this->sendSysEx(SYSEX_SET_LIGHT, sysexData);
 }
 
 //Transmits the command to get a byte of the servo register.

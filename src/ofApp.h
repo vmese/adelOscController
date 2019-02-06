@@ -41,6 +41,9 @@ const int kNbOfServos = 5;
 #define upperArmLength 0.42
 #define botomArmLength 0.47
 
+#define picMsgLength 12
+#define picId 5
+#define picLedCmd 0x01
 
 class ofApp : public ofBaseApp{
 	public:
@@ -69,9 +72,10 @@ class ofApp : public ofBaseApp{
                 void enableDrawCloud(bool &state);
                 void enableFindHead(bool &state);
                 void enableHeadTracking(bool &state);
+                void enableExpression(bool &state);
 
 
-                void turnOnLed(const int &pinNb);
+                void turnOnLed(const int &ledNb, const char &color, const int &intensity);
 
                 double diffclock(clock_t clock1, clock_t clock2);
 
@@ -106,6 +110,7 @@ class ofApp : public ofBaseApp{
                 ofParameter <float> fAngleServo1;
                 ofParameter <int> fMinServo1;
                 ofParameter <int> fMaxServo1;
+                ofParameter <int> fSpeedServo1;
                 ofParameter <float> fAngleServo2;
                 ofParameter <int> fMinServo2;
                 ofParameter <int> fMaxServo2;
@@ -119,6 +124,9 @@ class ofApp : public ofBaseApp{
                 ofParameter <int> fMinServo5;
                 ofParameter <int> fMaxServo5;
 
+                ofParameter <int> fServo2Temp;
+                ofParameter <int> fServo3Temp;
+
                 ofParameter <int> fHeadPositionX;
                 ofParameter <int> fHeadPositionY;
 
@@ -130,6 +138,15 @@ class ofApp : public ofBaseApp{
 
                 ofxOscParameterSync iccoreConnexion;
 
+                // leds control
+                ofParameterGroup fLedsControl;
+                ofParameter <int> fRComponentLedValue;
+                ofParameter <int> fVComponentLedValue;
+                ofParameter <int> fBComponentLedValue;
+                ofParameter <int> fBrightnessLedValue;
+                ofParameter <bool> fbEnableExpression;
+                ofParameter <int> fLedExpressionValue;
+
                 // Servos params
                 ofxXmlSettings fXMLReader;
                 std::vector<std::string> fServosNames;
@@ -139,8 +156,10 @@ class ofApp : public ofBaseApp{
                 std::vector<int> fServosMax;
                 std::vector<int> fServosInitialPos;
 
+
                 std::string fArbotixPortName;
                 int fArbotixRate;
+                bool fbFirstArbotixConnection;
 
                 std::string fArduinoPortName;
                 int fArduinoRate;
@@ -165,8 +184,6 @@ class ofApp : public ofBaseApp{
                 servo servo5;
 
                 int fServo1Temp;
-                int fServo2Temp;
-                int fServo3Temp;
                 int fServo4Temp;
                 int fServo5Temp;
 
@@ -202,4 +219,9 @@ class ofApp : public ofBaseApp{
                 bool fbLaunchBlockingMove;
                 float fHeadHorizontalPos;
                 float fHeadVerticalPos;
+                bool fbHeadFound;
+
+                // ----arduini serial communication --------
+                ofSerial serialComArduino ;
+
 };

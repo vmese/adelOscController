@@ -38,6 +38,20 @@ void ofApp::setup(){
 
     arbotix = new arbotixController();
     loadConfiguration("arbotixConfig.xml");
+    fbFirstArbotixConnection = true;
+
+    //setup setial com wit arduino
+//    serialComArduino.listDevices();
+//    vector <ofSerialDeviceInfo> deviceList = serialComArduino.getDeviceList();
+
+//    for (int i=0;i<deviceList.size();i++)
+//    {
+//        if (deviceList[i].getDeviceName()=="ttyACM0")
+//        {
+//            printf("arduino founded - name = %c \n",deviceList[i].getDeviceName().c_str());
+//            serialComArduino.setup(deviceList[i].getDeviceID(),9600);
+//        }
+//    }
 
 
     for (int i=0;i<kNbOfServos;i++)
@@ -61,7 +75,7 @@ void ofApp::setup(){
     servo3.setController(arbotix);
     servo3.setName("servo3");
     servo3.setId(2);
-    servo3.setSpeed(85); //85
+    servo3.setSpeed(50); //85
 
     servo4.setController(arbotix);
     servo4.setName("servo4");
@@ -84,18 +98,21 @@ void ofApp::setup(){
     fMinMaxControl1.setName("Min/Max Servo 1");
     fMinMaxControl1.add(fMinServo1.set("Min",fServosMins[0],1.0,1024.0));
     fMinMaxControl1.add(fMaxServo1.set("Max",fServosMax[0],1.0,1024.0));
+    fMinMaxControl1.add(fSpeedServo1.set("Speed",40,40,512));
 
     fAngleControl2.setName("Servo 2" );
     fAngleControl2.add(fAngleServo2.set("angle",0.5,0.0,1.0));
     fMinMaxControl2.setName("Min/Max Servo 2");
     fMinMaxControl2.add(fMinServo2.set("Min",fServosMins[1],1.0,1024.0));
     fMinMaxControl2.add(fMaxServo2.set("Max",fServosMax[1],1.0,1024.0));
+    fMinMaxControl2.add(fServo2Temp.set("Temp",0,20,100));
 
     fAngleControl3.setName("Servo 3");
     fAngleControl3.add(fAngleServo3.set("angle",0.5,0.0,1.0));
     fMinMaxControl3.setName("Min/Max Servo 3");
     fMinMaxControl3.add(fMinServo3.set("Min",fServosMins[2],1.0,1024.0));
     fMinMaxControl3.add(fMaxServo3.set("Max",fServosMax[2],1.0,1024.0));
+    fMinMaxControl3.add(fServo3Temp.set("Temp",0,20,100));
 
     fAngleControl4.setName("Servo 4");
     fAngleControl4.add(fAngleServo4.set("angle",0.5,0.0,1.0));
@@ -113,6 +130,15 @@ void ofApp::setup(){
     fHeadPositionControl.add(fHeadPositionX.set("X",512,0,1024));
     fHeadPositionControl.add(fHeadPositionY.set("Y",384,0,768));
 
+    fLedsControl.setName("Leds");
+    fLedsControl.add(fRComponentLedValue.set("R",255,0,255));
+    fLedsControl.add(fVComponentLedValue.set("V",255,0,255));
+    fLedsControl.add(fBComponentLedValue.set("B",255,0,255));
+    fLedsControl.add(fBrightnessLedValue.set("Brightness",10,0,255));
+    fLedsControl.add(fbEnableExpression.set("Expression On/Off",false));
+    fbEnableExpression.addListener(this,&ofApp::enableExpression);
+    fLedsControl.add(fLedExpressionValue.set("Expression type",1,1,10));
+
     fBooleanControls.setName("Controls");
 
     fBooleanControls.add(fbMotorsEnabled.set("Motors enabled",false));
@@ -128,12 +154,19 @@ void ofApp::setup(){
     fBooleanControls.add(fbTrackHead.set("Track head",false));
     fbTrackHead.addListener(this,&ofApp::enableHeadTracking);
 
+    servo1.setup(fMinServo1,fMaxServo1);
+    servo2.setup(fMinServo2,fMaxServo2);
+    servo3.setup(fMinServo3,fMaxServo3);
+    servo4.setup(fMinServo4,fMaxServo4);
+    servo5.setup(fMinServo5,fMaxServo5);
+
 
     fbMotorsEnabled = false;
     fbDrawCloud = false;
     fbFindHead = false;
     fbTrackHead = false;
     fbLaunchBlockingMove = false;
+    fbHeadFound = false;
 
     printf("draw cloud = %i\n",fbDrawCloud);
 
@@ -149,9 +182,10 @@ void ofApp::setup(){
     fGlobalControls.add(fMinMaxControl4);
     fGlobalControls.add(fMinMaxControl5);
     fGlobalControls.add(fBooleanControls);
+    fGlobalControls.add(fLedsControl);
 
     _gui.setup(fGlobalControls);
-    iccoreConnexion.setup((ofParameterGroup&)_gui.getParameter(),6666,fRemoteControllerIP,fRemoteControllerListeningPort);
+    iccoreConnexion.setup((ofParameterGroup&)_gui.getParameter(),6669,fRemoteControllerIP,fRemoteControllerListeningPort);
 
 
     //ofSetLogLevel(OF_LOG_VERBOSE);
@@ -166,6 +200,7 @@ void ofApp::setup(){
 
     cas = 2;
     objectDetectionStartTime = clock();
+
 }
 
 
@@ -195,6 +230,55 @@ void ofApp::update(){
                 updateCloud();
                 fHeadPoses.clear();
                 int nbPoses = fHeadPoseDetector->getHeadPoses(f3DImage,fHeadPoses);
+
+                int currentBrightness = fBrightnessLedValue.get();
+                int tmpBrightness;
+                if (nbPoses>0)
+                {
+                    if (fbHeadFound == false)
+                    {
+                        printf("current brightness = %i\n",currentBrightness);
+                        tmpBrightness = currentBrightness+20;
+                        if (tmpBrightness>=255)
+                        {
+                            tmpBrightness = 255;
+                        }
+                        if (tmpBrightness<=0)
+                        {
+                            tmpBrightness = 0;
+                        }
+                        serialComArduino.writeByte('B');
+                        serialComArduino.writeByte((char)tmpBrightness);
+                        serialComArduino.writeByte('\n');
+                        usleep(500000);
+                        fBrightnessLedValue.set(currentBrightness);
+                        fbHeadFound = true;
+                    }
+                }
+                else
+                {
+                    if (fbHeadFound == true)
+                    {
+                        tmpBrightness = currentBrightness-20;
+                        if (tmpBrightness>=255)
+                        {
+                            tmpBrightness = 255;
+                        }
+                        if (tmpBrightness<=0)
+                        {
+                            tmpBrightness = 0;
+                        }
+                        serialComArduino.writeByte('B');
+                        serialComArduino.writeByte((char)tmpBrightness);
+                        serialComArduino.writeByte('\n');
+                        usleep(500000);
+                        fBrightnessLedValue.set(currentBrightness/1.2);
+                        fbHeadFound = false;
+                    }
+                }
+
+
+
             }
         }
 
@@ -220,14 +304,14 @@ void ofApp::update(){
             /* assert arms mouvments */
             if (fHeadVerticalPos>=0)
             {
-                float servo3Angle = ofMap(fHeadVerticalPos,0,21.5,0.5,0.7);
+                float servo3Angle = ofMap(fHeadVerticalPos,0,21.5,0.3,0.8); //0.5 0.8
                 fAngleServo3.set(servo3Angle);
-                fAngleServo2.set(0.5);
+                fAngleServo2.set(0.7); //0.5
             }
             else
             {
-                float servo2Angle = ofMap(-fHeadVerticalPos,0,21.5,0.5,0.1);
-                float servo3Angle = ofMap(-fHeadVerticalPos,0,21.5,0.5,0.1);
+                float servo2Angle = ofMap(-fHeadVerticalPos,0,21.5,0.7,0.1);
+                float servo3Angle = ofMap(-fHeadVerticalPos,0,21.5,0.3,0.0);
                 fAngleServo2.set(servo2Angle);
                 fAngleServo3.set(servo3Angle);
             }
@@ -329,6 +413,11 @@ void ofApp::update(){
     //Rq : need to be called after arbotix->connect
     arbotix->update();
 
+    if (arbotix->isInitialized() && fbFirstArbotixConnection)
+    {
+        servo2.setPGain(32);
+        fbFirstArbotixConnection = false;
+    }
     //update servos
     if (arbotix->isInitialized() && fbMotorsEnabled) {
         //printf("set servo 2 angle to %f\n",fAngleServo2.get());
@@ -341,8 +430,16 @@ void ofApp::update(){
         if (fbLaunchBlockingMove==false)
         {
             servo1.setAngle(fAngleServo1.get());
+            servo1.setSpeed(fSpeedServo1.get());
+
             servo2.setAngle(fAngleServo2.get());
+            //int pG = servo2.getPGain();
+            //ofLogNotice() << "PGain servo " << 2 << ":" << pG ;
+
             servo3.setAngle(fAngleServo3.get());
+            //servo3.setPGain(32);
+            //ofLogNotice() << "PGain servo " << 3 << ":" << pG ;
+
             servo4.setAngle(fAngleServo4.get());
             servo5.setAngle(fAngleServo5.get());
 
@@ -353,6 +450,7 @@ void ofApp::update(){
             servo4.update();
             servo5.update();
             arbotix->moveServos();
+
         }
         else
         {
@@ -379,32 +477,48 @@ void ofApp::update(){
         }
      }
 
+     //update Leds Values
 
-     // check servos temp
+//     serialComArduino.writeByte('L');
+//     serialComArduino.writeByte((char) fRComponentLedValue.get());
+//     serialComArduino.writeByte((char)fVComponentLedValue.get());
+//     serialComArduino.writeByte((char)fBComponentLedValue.get());
+//     serialComArduino.writeByte('\n');
 
-     if (elapsedTime>=2000)
-     {
-        // read a first value, otherwise temp is false in second reading (0x2B)
-        arbotix->getDynamixelRegister(3,0x24,2);
-
-        fServo2Temp = servo2.getTemp();
-        fServo3Temp = servo3.getTemp();
-        //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
-        //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
-        ofResetElapsedTimeCounter() ;
-     }
+//     serialComArduino.writeByte('B');
+//     serialComArduino.writeByte((char)fBrightnessLedValue.get());
+//     serialComArduino.writeByte('\n');
 
 }
 
 void ofApp::standUp()
 {
-     fAngleServo3.set(1.0);
-//     int timeSleepS = 1;
-//     usleep(timeSleepS*1000000);
-     fAngleServo2.set(1.0);
-     fAngleServo4.set(0.8);
-     fAngleServo5.set(0.5);
+//     fAngleServo3.set(1.0);
+////     int timeSleepS = 1;
+////     usleep(timeSleepS*1000000);
+//     fAngleServo2.set(1.0);
+//     fAngleServo4.set(0.8);
+//     fAngleServo5.set(0.5);
 
+    float currentVal1 = fAngleServo2.get();
+    float currentVal2 = fAngleServo3.get();
+
+    for (int i=0;i<1000;i++)
+    {
+        currentVal1 +=0.001;
+        currentVal2 +=0.001;
+        if (currentVal1>=1.0)
+        {
+            currentVal1 = 1.0;
+        }
+        if (currentVal2>=1.0)
+        {
+            currentVal2 = 1.0;
+        }
+    printf("set angle to %f\n",currentVal1);
+    fAngleServo2.set(currentVal1);
+    fAngleServo3.set(currentVal2);
+    }
 
 }
 
@@ -419,6 +533,31 @@ void ofApp::goToRest()
 //--------------------------------------------------------------
 void ofApp::draw(){
  _gui.draw();
+
+    int elapsedTime = ofGetElapsedTimeMillis();
+
+    // check servos temp
+
+    if (elapsedTime>=250)
+    {
+        servo2.getLoadInPct();
+        servo3.getLoadInPct();
+        ofResetElapsedTimeCounter() ;
+    }
+
+//    if (elapsedTime>=2000)
+//    {
+//    //        // read a first value, otherwise temp is false in second reading (0x2B)
+//    //        arbotix->getDynamixelRegister(3,0x24,2);
+
+//    //        int tempServo2 = servo2.getTemp();
+//    //        fServo2Temp.set(tempServo2);
+//    //        int tempServo3 = servo3.getTemp();
+//    //        fServo3Temp.set(tempServo3);
+//    //        //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
+//    //        //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+//        ofResetElapsedTimeCounter() ;
+//    }
 
  // VISION
   if( cas == 2)
@@ -509,12 +648,41 @@ void ofApp::enableHeadTracking(bool &state)
 {
     if (state==true)
     {
+        fMinServo4.set(250);
+        fMaxServo4.set(460);
+        fMinServo5.set(420);
+        fMaxServo5.set(580);
         fbTrackHead = true;
+
     }
     else
     {
+        fMinServo4.set(fServosMins[3]);
+        fMaxServo4.set(fServosMax[3]);
+        fMinServo5.set(fServosMins[4]);
+        fMaxServo5.set(fServosMax[4]);
         fbTrackHead = false;
     }
+}
+
+void ofApp::enableExpression(bool &state)
+{
+    if (state==true)
+    {
+        printf("smile\n");
+        serialComArduino.writeByte('E');
+        printf("send expression nb %i\n",fLedExpressionValue.get());
+        serialComArduino.writeByte((char)fLedExpressionValue.get());
+        serialComArduino.writeByte('\n');
+
+    }
+    else
+    {
+        printf("not smile\n");
+        serialComArduino.writeByte('N');
+        serialComArduino.writeByte('\n');
+    }
+
 }
 
 void ofApp::enableFindHead(bool &state)
@@ -564,6 +732,41 @@ void ofApp::keyPressed(int key){
         }
         break;
 
+    case 'b' :
+    {
+        printf("send Leds commands\n");
+        serialComArduino.writeByte('L');
+        serialComArduino.writeByte((char)ofRandom(0,255));
+        serialComArduino.writeByte((char)ofRandom(0,255));
+        serialComArduino.writeByte((char)ofRandom(0,255));
+        serialComArduino.writeByte('\n');
+
+   }
+
+    case 'd' :
+        if (fbDrawCloud ==false)
+        {
+            fbDrawCloud = true;
+        }
+        else if (fbDrawCloud==true)
+        {
+            fbDrawCloud = false;
+        }
+        break;
+
+
+    case 'l' :
+    {
+        char val = 0x60;
+        char picMess[picMsgLength];
+        for (int i=0;i<picMsgLength;i++)
+        {
+            picMess[i]=val;
+        }
+        arbotix->sendMsgToPic(picId,picLedCmd,picMess);
+        break;
+    }
+
     case 'n' :
         {
         ofResetElapsedTimeCounter();
@@ -572,6 +775,11 @@ void ofApp::keyPressed(int key){
         printf("elapsed time = %i ms\n",elapsedTime);
         break;
         }
+
+
+    case 's' :
+        standUp();
+        break;
 
     case 't' :
         if (fbTrackHead ==false)
@@ -584,28 +792,16 @@ void ofApp::keyPressed(int key){
         }
         break;
 
-    case 's' :
-        standUp();
+    case 1 :
+        turnOnLed(1,'r',100);
         break;
 
-    case 'r' :
-        goToRest();
+    case 2 :
+        turnOnLed(1,'v',100);
         break;
 
-    case 'l' :
-        //arbotix->setDynamixelRegister(4,0x19,2,1);
-        break;
-
-    case 'd' :
-        if (fbDrawCloud ==false)
-        {
-            fbDrawCloud = true;
-        }
-        else if (fbDrawCloud==true)
-        {
-            fbDrawCloud = false;
-        }
-        break;
+    case 3 :
+        turnOnLed(1,'b',100);
         break;
 
     default:
@@ -613,6 +809,32 @@ void ofApp::keyPressed(int key){
     }
 
 
+}
+
+void ofApp::turnOnLed(const int &ledNb, const char &color, const int &intensity)
+{
+    char *picMsg = new char[picMsgLength];
+    memset(picMsg,0,picMsgLength);
+
+    switch (color){
+
+    case 'r':
+        picMsg[3*(ledNb-1)] = intensity;
+        break;
+
+    case 'v':
+        picMsg[3*(ledNb-1)+1] = intensity;
+        break;
+
+    case 'b':
+        picMsg[3*(ledNb-1)+2] = intensity;
+        break;
+
+    default :
+        break;
+    }
+
+    arbotix->sendMsgToPic(picId,picLedCmd,picMsg);
 }
 
 //--------------------------------------------------------------
@@ -853,6 +1075,7 @@ void ofApp::drawPoses() {
                     //printf("angle vertical= %.1f\n",fHeadVerticalPos);
 
                     objectDetectionStartTime = clock();
+
                 }
            }
         }

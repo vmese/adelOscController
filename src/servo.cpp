@@ -38,16 +38,41 @@ int servo::getTemp()
     return temp;
 }
 
+int servo::getLoad()
+{
+    int load = fController->getServoLoad(fId);
+    //printf("servo %i - load = %i\n",fId,load);
+    return load;
+}
+
+float servo::getLoadInPct()
+{
+    int load = fController->getServoLoad(fId);
+    float pctLoad = load/1023.0*100.0;
+    //printf("servo %i - load = %1.1f\n",fId,pctLoad);
+    return pctLoad;
+}
+
 int servo::getPos()
 {
     int pos = fController->getServoPos(fId);
     return pos;
 }
 
+int servo::getPGain()
+{
+    int pG = fController->getServoPGain(fId);
+    return pG;
+}
+
+
 void servo::setAngle(float angle)
 {
-    //printf("servo::setAngle - fMin = %i - fMax = %i - angle = %f\n",fMin,fMax,angle);
     fAngle = (int) ofMap(angle,0.,1.,fMin,fMax);
+    if (fId==1)
+    {
+        printf("servo::setAngle - fMin = %i - fMax = %i - angle = %i\n",fMin,fMax,fAngle);
+    }
 }
 
 void servo::waitForStop()
@@ -117,6 +142,13 @@ void servo::setSpeed(const int &speed)
 {
     fSpeed = speed;
 }
+
+
+void servo::setPGain(const int &pGain)
+{
+    fController->setPGain(fId,pGain);
+}
+
 
 int servo::getId()
 {

@@ -13,6 +13,9 @@
 #define GRIP_ID 1
 #define ax12TempRegister 0x2B
 #define ax12PosRegister 0x24
+#define ax12LBLoadRegister 0x28
+#define ax12HBLoadRegister 0x29
+#define ax12PGainRegister 0x1C
 
 class arbotixController
 {
@@ -60,6 +63,8 @@ public:
     //void resetServo(const uint &servoId);
     int getServoTemp(const unsigned int &servoId);
     int getServoPos(const unsigned int &servoId);
+    int getServoLoad(const unsigned int &servoId);
+    int getServoPGain(const unsigned int &servoId);
     void enableServo(const unsigned int &servoId);
     void disableServo(const unsigned int &servoId);
     void getDynamixelRegister(const unsigned char &servo, const unsigned char &reg, const unsigned char &length);
@@ -68,6 +73,8 @@ public:
     bool moveServoAndWait(const int & servoId, const int & pos, const int & speed );
     bool waitForDynamixelStopped(unsigned char servo);
     void test();
+    void sendMsgToPic(const char picId, const char picCmd, const char *picMess);
+    void setPGain(const unsigned int & servoId, const unsigned int &pGain);
 
 private :
 
@@ -81,6 +88,9 @@ private :
     boost::mutex fMutex;
     std::map<int,int> fServosTemps;
     std::map<int,int> fServosPos;
+    std::map<int,int> fLBServosLoad;
+    std::map<int,int> fHBServosLoad;
+    std::map<int,int> fPGainServos;
 
 
 };

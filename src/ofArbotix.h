@@ -110,6 +110,7 @@
 #define SYSEX_DYNAMIXEL_CONFIGURE_SERVO						0x57 // Data packet to configure key motor params like cw and ccw limits.
 #define SYSEX_DYNAMIXEL_STOPPED								0x56 // Data packet to configure reporting of when a servo stops moving.
 #define SYSEX_COMMANDER_DATA								0x55 // Data packet with commander remote control buttons pressed.
+#define SYSEX_SET_LIGHT								0x54 // Data packet to control leds
 
 // ---- arduino constants (for Arduino NG and Diecimila)
 
@@ -163,7 +164,7 @@
 #define FIRMWARE2_2								22
 #define FIRMWARE2_3                             23
 
-
+#define PIC_MESSAGE_MAX_LENGTH  28
 /**
         This class extend ofStandardFirmata and provides additional functionality like servo support through SysEx messages.
 		use the OFstdFirmata for servo support...
@@ -492,7 +493,11 @@ class ARDUINO_PORT ofArbotix{
 				//Transmits the command to check if the servo is moving and when it is no longer moving send a signal back.
 				virtual void sendDynamixelStopped(unsigned char servo);
 
-				virtual bool waitForSysExMessage(unsigned char cmd, unsigned int timeout_sec = 1);
+                                virtual bool waitForSysExMessage(unsigned char cmd, unsigned int timeout_sec = 1);
+
+                                virtual void sendCmdToPic(const char picId, const char picCmd);
+
+                                char picMessage[PIC_MESSAGE_MAX_LENGTH];
 
 		protected:
 				bool _initialized;
