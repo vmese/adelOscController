@@ -146,6 +146,7 @@ class ofApp : public ofBaseApp{
                 ofParameter <int> fBrightnessLedValue;
                 ofParameter <bool> fbEnableExpression;
                 ofParameter <int> fLedExpressionValue;
+                bool fbExpressionEnabled;
 
                 // Servos params
                 ofxXmlSettings fXMLReader;

@@ -69,10 +69,10 @@ int servo::getPGain()
 void servo::setAngle(float angle)
 {
     fAngle = (int) ofMap(angle,0.,1.,fMin,fMax);
-    if (fId==1)
-    {
-        printf("servo::setAngle - fMin = %i - fMax = %i - angle = %i\n",fMin,fMax,fAngle);
-    }
+//    if (fId==1)
+//    {
+//        printf("servo::setAngle - fMin = %i - fMax = %i - angle = %i\n",fMin,fMax,fAngle);
+//    }
 }
 
 void servo::waitForStop()

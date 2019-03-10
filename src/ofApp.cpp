@@ -41,17 +41,17 @@ void ofApp::setup(){
     fbFirstArbotixConnection = true;
 
     //setup setial com wit arduino
-//    serialComArduino.listDevices();
-//    vector <ofSerialDeviceInfo> deviceList = serialComArduino.getDeviceList();
+    serialComArduino.listDevices();
+    vector <ofSerialDeviceInfo> deviceList = serialComArduino.getDeviceList();
 
-//    for (int i=0;i<deviceList.size();i++)
-//    {
-//        if (deviceList[i].getDeviceName()=="ttyACM0")
-//        {
-//            printf("arduino founded - name = %c \n",deviceList[i].getDeviceName().c_str());
-//            serialComArduino.setup(deviceList[i].getDeviceID(),9600);
-//        }
-//    }
+    for (int i=0;i<deviceList.size();i++)
+    {
+        if (deviceList[i].getDeviceName()=="ttyACM0")
+        {
+            printf("arduino founded - name = %c \n",deviceList[i].getDeviceName().c_str());
+            serialComArduino.setup(deviceList[i].getDeviceID(),9600);
+        }
+    }
 
 
     for (int i=0;i<kNbOfServos;i++)
@@ -75,7 +75,7 @@ void ofApp::setup(){
     servo3.setController(arbotix);
     servo3.setName("servo3");
     servo3.setId(2);
-    servo3.setSpeed(50); //85
+    servo3.setSpeed(58); //85
 
     servo4.setController(arbotix);
     servo4.setName("servo4");
@@ -93,12 +93,13 @@ void ofApp::setup(){
     ///setup osc connexion and controls
     printf("---------------setup osc connexion and controls-----------------\n");
 
+
     fAngleControl1.setName("Servo 1");
     fAngleControl1.add(fAngleServo1.set("angle",0.5,0.0,1.0));
     fMinMaxControl1.setName("Min/Max Servo 1");
     fMinMaxControl1.add(fMinServo1.set("Min",fServosMins[0],1.0,1024.0));
     fMinMaxControl1.add(fMaxServo1.set("Max",fServosMax[0],1.0,1024.0));
-    fMinMaxControl1.add(fSpeedServo1.set("Speed",40,40,512));
+    fMinMaxControl1.add(fSpeedServo1.set("Speed",40,40,256));
 
     fAngleControl2.setName("Servo 2" );
     fAngleControl2.add(fAngleServo2.set("angle",0.5,0.0,1.0));
@@ -140,13 +141,11 @@ void ofApp::setup(){
     fLedsControl.add(fLedExpressionValue.set("Expression type",1,1,10));
 
     fBooleanControls.setName("Controls");
-
     fBooleanControls.add(fbMotorsEnabled.set("Motors enabled",false));
     fbMotorsEnabled.addListener(this,&ofApp::enableMotors);
 
     fBooleanControls.add(fbDrawCloud.set("Draw Cloud",false));
     fbDrawCloud.addListener(this,&ofApp::enableDrawCloud);
-
 
     fBooleanControls.add(fbFindHead.set("Find head",false));
     fbFindHead.addListener(this,&ofApp::enableFindHead);
@@ -169,6 +168,7 @@ void ofApp::setup(){
     fbHeadFound = false;
 
     printf("draw cloud = %i\n",fbDrawCloud);
+
 
     fGlobalControls.add(fAngleControl1);
     fGlobalControls.add(fAngleControl2);
@@ -361,18 +361,19 @@ void ofApp::update(){
                 }
             } // if elapsedTime>1000
         }
-
-        // read servos tempsfHeadHorizontalPos
-        // read a first value, otherwise temp is false in second reading (0x2B)
-//        arbotix->getDynamixelRegister(3,0x24,2);
-
-//        fServo2Temp = servo2.getTemp();
-//        fServo3Temp = servo3.getTemp();
-//        //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
-//        //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
-
-//        ofResetElapsedTimeCounter() ;
     }
+
+//        if (elapsedTime>=2000)
+//       {
+//            // read servos temps
+//            // read a first value, otherwise temp is false in second reading (0x2B)
+//            arbotix->getDynamixelRegister(3,0x24,2);
+//            fServo2Temp = servo2.getTemp();
+//            fServo3Temp = servo3.getTemp();
+//            //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
+//            //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+//            ofResetElapsedTimeCounter() ;
+//        }
     // set or get servos angles
 
     if (fbMotorsEnabled==false && arbotix->isInitialized())
@@ -479,15 +480,28 @@ void ofApp::update(){
 
      //update Leds Values
 
-//     serialComArduino.writeByte('L');
-//     serialComArduino.writeByte((char) fRComponentLedValue.get());
-//     serialComArduino.writeByte((char)fVComponentLedValue.get());
-//     serialComArduino.writeByte((char)fBComponentLedValue.get());
-//     serialComArduino.writeByte('\n');
+     serialComArduino.writeByte('L');
+     serialComArduino.writeByte((char) fRComponentLedValue.get());
+     serialComArduino.writeByte((char)fVComponentLedValue.get());
+     serialComArduino.writeByte((char)fBComponentLedValue.get());
+     serialComArduino.writeByte('\n');
 
-//     serialComArduino.writeByte('B');
-//     serialComArduino.writeByte((char)fBrightnessLedValue.get());
-//     serialComArduino.writeByte('\n');
+     serialComArduino.writeByte('B');
+     serialComArduino.writeByte((char)fBrightnessLedValue.get());
+     serialComArduino.writeByte('\n');
+
+     if (fbExpressionEnabled == true)
+     {
+         serialComArduino.writeByte('E');
+         printf("send expression nb %i\n",fLedExpressionValue.get());
+         serialComArduino.writeByte((char)fLedExpressionValue.get());
+         serialComArduino.writeByte('\n');
+     }
+     else
+     {
+         serialComArduino.writeByte('N');
+         serialComArduino.writeByte('\n');
+     }
 
 }
 
@@ -538,26 +552,26 @@ void ofApp::draw(){
 
     // check servos temp
 
-    if (elapsedTime>=250)
-    {
-        servo2.getLoadInPct();
-        servo3.getLoadInPct();
-        ofResetElapsedTimeCounter() ;
-    }
-
-//    if (elapsedTime>=2000)
+//    if (elapsedTime>=250)
 //    {
-//    //        // read a first value, otherwise temp is false in second reading (0x2B)
-//    //        arbotix->getDynamixelRegister(3,0x24,2);
-
-//    //        int tempServo2 = servo2.getTemp();
-//    //        fServo2Temp.set(tempServo2);
-//    //        int tempServo3 = servo3.getTemp();
-//    //        fServo3Temp.set(tempServo3);
-//    //        //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
-//    //        //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+//        servo2.getLoadInPct();
+//        servo3.getLoadInPct();
 //        ofResetElapsedTimeCounter() ;
 //    }
+
+    if (elapsedTime>=2000 && arbotix->isInitialized())
+    {
+            // read a first value, otherwise temp is false in second reading (0x2B)
+            arbotix->getDynamixelRegister(3,0x24,2);
+
+            int tempServo2 = servo2.getTemp();
+            fServo2Temp.set(tempServo2);
+            int tempServo3 = servo3.getTemp();
+            fServo3Temp.set(tempServo3);
+            printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
+            printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+            ofResetElapsedTimeCounter() ;
+    }
 
  // VISION
   if( cas == 2)
@@ -669,18 +683,14 @@ void ofApp::enableExpression(bool &state)
 {
     if (state==true)
     {
+        fbExpressionEnabled = true;
         printf("smile\n");
-        serialComArduino.writeByte('E');
-        printf("send expression nb %i\n",fLedExpressionValue.get());
-        serialComArduino.writeByte((char)fLedExpressionValue.get());
-        serialComArduino.writeByte('\n');
 
     }
     else
     {
         printf("not smile\n");
-        serialComArduino.writeByte('N');
-        serialComArduino.writeByte('\n');
+        fbExpressionEnabled = false;
     }
 
 }
