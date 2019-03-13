@@ -21,7 +21,7 @@
         <name>servo2</name>
         <id>1</id>
 	<pinNb>10</pinNb>
-        <min>40</min>
+        <min>1</min>
         <max>570</max>
         <initialPos>10</initialPos>
 </servo>
@@ -30,7 +30,7 @@
         <name>servo3</name>
         <id>2</id>
 	<pinNb>10</pinNb>
-        <min>170</min>
+        <min>300</min>
         <max>1024</max>
         <initialPos>540</initialPos>
 </servo>
@@ -39,7 +39,7 @@
         <name>servo4</name>
         <id>3</id>
 	<pinNb>10</pinNb>
-	<min>105</min>
+	<min>65</min>
         <max>512</max>
 	<initialPos>512</initialPos>
 </servo>

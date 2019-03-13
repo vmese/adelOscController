@@ -7,6 +7,7 @@
 #include "ofxXmlSettings.h"
 
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
 #include "ofParameterGroup.h"
 #include "ofParameter.h"
 #include "ofxOscParameterSync.h"
@@ -198,6 +199,7 @@ class ofApp : public ofBaseApp{
                 int w,h, cas;
                 clock_t objectDetectionStartTime;
 
+                boost::mutex fHeadTrackingMutex;
 
                 // kinect
                 camera3D *f3DCamera;

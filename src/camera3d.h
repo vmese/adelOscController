@@ -9,7 +9,7 @@ public:
     camera3D();
     camera3D(const std::string &Ip, const int &listeningPort, const int &width, const int &height);
     void setup();
-    void start();
+    bool start();
     void stop();
     void update();
     void draw(int x, int y);

@@ -25,17 +25,27 @@ void camera3D::setup()
 
 }
 
-void camera3D::start()
+bool camera3D::start()
 {
     if (fbLocalCamera)
     {
         //fLocalCam->setRegistration(true);
-        fLocalCam->init();
-        fLocalCam->open();
+        if (fLocalCam->init() == false)
+        {
+            return false;
+        }
+        if (fLocalCam->open() == false)
+        {
+            return false;
+        }
         fLocalCam->setDepthClipping(500,2000);
         printf("kinext width = %i\n",fLocalCam->width);
         printf("kinext height = %i\n",fLocalCam->height);
-
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 

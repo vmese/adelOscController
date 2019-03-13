@@ -26,7 +26,11 @@ void ofApp::setup(){
     f3DCamera = new camera3D();
     //f3DCamera = new camera3D("127.0.0.1",11999,KW,KH); // remote cam
     f3DImage.create(KH,KW,CV_32FC3);
-    f3DCamera->start();
+    bool ret = f3DCamera->start();
+    if (ret==false)
+    {
+        printf("!!! Error while inititializing 3d cam !!!\n");
+    }
 
     // setup the head pose detector
     fHeadPoseDetector = new headPoseDetector();
@@ -99,7 +103,7 @@ void ofApp::setup(){
     fMinMaxControl1.setName("Min/Max Servo 1");
     fMinMaxControl1.add(fMinServo1.set("Min",fServosMins[0],1.0,1024.0));
     fMinMaxControl1.add(fMaxServo1.set("Max",fServosMax[0],1.0,1024.0));
-    fMinMaxControl1.add(fSpeedServo1.set("Speed",40,40,256));
+    fMinMaxControl1.add(fSpeedServo1.set("Speed",40,40,512));
 
     fAngleControl2.setName("Servo 2" );
     fAngleControl2.add(fAngleServo2.set("angle",0.5,0.0,1.0));
@@ -272,7 +276,7 @@ void ofApp::update(){
                         serialComArduino.writeByte((char)tmpBrightness);
                         serialComArduino.writeByte('\n');
                         usleep(500000);
-                        fBrightnessLedValue.set(currentBrightness/1.2);
+                        fBrightnessLedValue.set(currentBrightness);
                         fbHeadFound = false;
                     }
                 }
@@ -339,6 +343,7 @@ void ofApp::update(){
             {
                 if (fAngleServo5>=0.95 && fAngleServo1 >=0.1)
                 {
+
                     fbLaunchBlockingMove = true;
                     fbTrackHead = false;
                     fAngleServo1 -= 0.1 ;
@@ -459,6 +464,7 @@ void ofApp::update(){
             // ---- launch blocking move -------
             //ofResetElapsedTimeCounter() ;
             //printf("start move and wait\n");
+            //boost::mutex::scoped_lock lock(fHeadTrackingMutex);
             bool success = servo1.moveAndWait(fAngleServo1.get());
             //int elapsedTime = ofGetElapsedTimeMillis();
             //ofLogNotice() << "move and wait 1 : "<< success << " - Elapsed time : " <<  elapsedTime ;
@@ -493,7 +499,7 @@ void ofApp::update(){
      if (fbExpressionEnabled == true)
      {
          serialComArduino.writeByte('E');
-         printf("send expression nb %i\n",fLedExpressionValue.get());
+         //printf("send expression nb %i\n",fLedExpressionValue.get());
          serialComArduino.writeByte((char)fLedExpressionValue.get());
          serialComArduino.writeByte('\n');
      }
@@ -568,8 +574,8 @@ void ofApp::draw(){
             fServo2Temp.set(tempServo2);
             int tempServo3 = servo3.getTemp();
             fServo3Temp.set(tempServo3);
-            printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
-            printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
+            //printf ("Temp Servo 2 = %f °C\n",fServo2Temp);
+            //printf ("Temp Servo 3 = %f °C\n",fServo3Temp);
             ofResetElapsedTimeCounter() ;
     }
 
@@ -660,6 +666,7 @@ void ofApp::enableDrawCloud(bool &state)
 
 void ofApp::enableHeadTracking(bool &state)
 {
+    //boost::mutex::scoped_lock lock(fHeadTrackingMutex);
     if (state==true)
     {
         fMinServo4.set(250);
