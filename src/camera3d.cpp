@@ -25,6 +25,15 @@ void camera3D::setup()
 
 }
 
+void camera3D::setCameraTiltAngle(int angle)
+{
+    if (fbLocalCamera)
+    {
+        fLocalCam->setCameraTiltAngle(angle);
+    }
+
+}
+
 bool camera3D::start()
 {
     if (fbLocalCamera)
@@ -41,6 +50,7 @@ bool camera3D::start()
         fLocalCam->setDepthClipping(500,2000);
         printf("kinext width = %i\n",fLocalCam->width);
         printf("kinext height = %i\n",fLocalCam->height);
+	fLocalCam->setLed(ofxKinect::LED_OFF);
         return true;
     }
     else

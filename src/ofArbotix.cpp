@@ -1117,7 +1117,7 @@ void ofArbotix::sendDynamixelSynchMoveExecute() {
 //Please note that this will ONLY work for an arbotix arduino board
 void ofArbotix::sendDynamixelMove(unsigned char servo, int pos, int speed) {
 
-        printf("send pos : %i - to servo %i - speed = %i\n",pos, servo, speed);
+        //printf("send pos : %i - to servo %i - speed = %i\n",pos, servo, speed);
         unsigned char pos0 = getLowByte(pos);
 	unsigned char pos1 = getHighByte(pos);
 	unsigned char speed0 = getLowByte(speed);

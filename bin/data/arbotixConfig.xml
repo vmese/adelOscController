@@ -4,7 +4,7 @@
 </port>
 
 <oscParams>
-	<remoteIP>127.0.0.1</remoteIP>
+	<remoteIP>192.168.2.4</remoteIP>
 	<listeningPort>6668</listeningPort>
 </oscParams>
 

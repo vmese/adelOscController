@@ -137,6 +137,9 @@ class ofApp : public ofBaseApp{
                 ofParameter <bool> fbFindHead;
                 ofParameter <bool> fbTrackHead;
 
+                ofParameterGroup fAbletonConnectionControls;
+                ofParameter <bool> fbConnectToAbleton;
+
                 ofxOscParameterSync iccoreConnexion;
 
                 // leds control
@@ -212,7 +215,7 @@ class ofApp : public ofBaseApp{
 
                 //-------------------------------------------------------
                 // kinect motor tilt angle
-                int kTilt = 0;
+                int kTilt = 30;
                 // stuff to calculate average fpg
                 float kFPS = 0;
                 float avgkFPS = 0;

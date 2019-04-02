@@ -18,6 +18,7 @@ public:
     ofVec3f getWorldCoordinateAt(int cx, int cy);
     bool    setCameraTiltAngle(float angleInDegrees); // to do
     bool isFrameNew();
+    void setCameraTiltAngle(int angle);
 
 private :
     ofxKinect* fLocalCam;

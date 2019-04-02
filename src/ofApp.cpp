@@ -98,6 +98,10 @@ void ofApp::setup(){
     printf("---------------setup osc connexion and controls-----------------\n");
 
 
+    // fictive parameter
+    fAbletonConnectionControls.setName("Ableton");
+    fAbletonConnectionControls.add(fbConnectToAbleton.set("On/Off",false));
+
     fAngleControl1.setName("Servo 1");
     fAngleControl1.add(fAngleServo1.set("angle",0.5,0.0,1.0));
     fMinMaxControl1.setName("Min/Max Servo 1");
@@ -139,10 +143,10 @@ void ofApp::setup(){
     fLedsControl.add(fRComponentLedValue.set("R",255,0,255));
     fLedsControl.add(fVComponentLedValue.set("V",255,0,255));
     fLedsControl.add(fBComponentLedValue.set("B",255,0,255));
-    fLedsControl.add(fBrightnessLedValue.set("Brightness",10,0,255));
+    fLedsControl.add(fBrightnessLedValue.set("Brightness",5,0,255));
     fLedsControl.add(fbEnableExpression.set("Expression On/Off",false));
     fbEnableExpression.addListener(this,&ofApp::enableExpression);
-    fLedsControl.add(fLedExpressionValue.set("Expression type",1,1,10));
+    fLedsControl.add(fLedExpressionValue.set("Expression type",1,1,2));
 
     fBooleanControls.setName("Controls");
     fBooleanControls.add(fbMotorsEnabled.set("Motors enabled",false));
@@ -187,6 +191,7 @@ void ofApp::setup(){
     fGlobalControls.add(fMinMaxControl5);
     fGlobalControls.add(fBooleanControls);
     fGlobalControls.add(fLedsControl);
+    fGlobalControls.add(fAbletonConnectionControls);
 
     _gui.setup(fGlobalControls);
     iccoreConnexion.setup((ofParameterGroup&)_gui.getParameter(),6669,fRemoteControllerIP,fRemoteControllerListeningPort);
@@ -349,7 +354,7 @@ void ofApp::update(){
                     fAngleServo1 -= 0.1 ;
                     if (fAngleServo1<=0.0)
                          fAngleServo1=0.0;
-                     printf("Decrease base angle to %f\n\n",fAngleServo1);
+                     //printf("Decrease base angle to %f\n\n",fAngleServo1);
                     fAngleServo5=0.5;
         //            //fmeanHeadPositionX = 0.5;
                 }
@@ -360,7 +365,7 @@ void ofApp::update(){
                     fAngleServo1 += 0.1;
                     if (fAngleServo1>=1.0)
                         fAngleServo1=1.0;
-                    printf("Increase base angle to %f\n\n",fAngleServo1);
+                    //printf("Increase base angle to %f\n\n",fAngleServo1);
                     fAngleServo5=0.5;
         //            //fmeanHeadPositionX = 0.5;
                 }
@@ -421,7 +426,7 @@ void ofApp::update(){
 
     if (arbotix->isInitialized() && fbFirstArbotixConnection)
     {
-        servo2.setPGain(32);
+        //servo2.setPGain(32);
         fbFirstArbotixConnection = false;
     }
     //update servos
@@ -498,6 +503,7 @@ void ofApp::update(){
 
      if (fbExpressionEnabled == true)
      {
+         //printf("send expression nb %i\n",fLedExpressionValue.get());
          serialComArduino.writeByte('E');
          //printf("send expression nb %i\n",fLedExpressionValue.get());
          serialComArduino.writeByte((char)fLedExpressionValue.get());
@@ -505,6 +511,7 @@ void ofApp::update(){
      }
      else
      {
+         //printf("send not smile \n");
          serialComArduino.writeByte('N');
          serialComArduino.writeByte('\n');
      }
@@ -574,8 +581,8 @@ void ofApp::draw(){
             fServo2Temp.set(tempServo2);
             int tempServo3 = servo3.getTemp();
             fServo3Temp.set(tempServo3);
-            //printf ("Temp Servo 2 = %f °C\n",fServo2Temp);
-            //printf ("Temp Servo 3 = %f °C\n",fServo3Temp);
+            //printf ("Temp Servo 2 = %i °C\n",fServo2Temp);
+            //printf ("Temp Servo 3 = %i °C\n",fServo3Temp);
             ofResetElapsedTimeCounter() ;
     }
 
@@ -821,6 +828,18 @@ void ofApp::keyPressed(int key){
         turnOnLed(1,'b',100);
         break;
 
+    case '0' :
+        f3DCamera->setCameraTiltAngle(30);
+        break ;
+
+    case '.' :
+        kTilt--;
+        if (kTilt < 10)
+        {
+            kTilt = 10;
+        }
+        f3DCamera->setCameraTiltAngle(kTilt);
+        break;
     default:
         break;
     }
