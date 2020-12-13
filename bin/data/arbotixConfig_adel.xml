@@ -4,7 +4,7 @@
 </port>
 
 <oscParams>
-	<remoteIP>127.0.0.1</remoteIP>
+	<remoteIP>192.168.2.4</remoteIP>
 	<listeningPort>6668</listeningPort>
 </oscParams>
 
@@ -21,7 +21,7 @@
         <name>servo2</name>
         <id>1</id>
 	<pinNb>10</pinNb>
-        <min>10</min>
+        <min>1</min>
         <max>570</max>
         <initialPos>10</initialPos>
 </servo>
@@ -31,7 +31,7 @@
         <id>2</id>
 	<pinNb>10</pinNb>
         <min>300</min>
-        <max>900</max>
+        <max>1024</max>
         <initialPos>540</initialPos>
 </servo>
 
@@ -39,7 +39,7 @@
         <name>servo4</name>
         <id>3</id>
 	<pinNb>10</pinNb>
-	<min>112</min>
+	<min>65</min>
         <max>512</max>
 	<initialPos>512</initialPos>
 </servo>
